@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "addrnorm"
+version = "0.1.0"
+description = "Normalize freeform US postal addresses into USPS-style standard form"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "kmmartinez5" }]
+
+[project.scripts]
+addrnorm = "addrnorm.cli:main"
