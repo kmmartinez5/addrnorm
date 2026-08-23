@@ -12,6 +12,8 @@ from .data import DIRECTIONALS, STATE_ABBR, STREET_SUFFIXES, UNIT_DESIGNATORS
 
 _ZIP_RE = re.compile(r"(\d{5})(-\d{4})?\s*$")
 _STATE_ABBR_SET = set(STATE_ABBR.values())
+_UNIT_DESIGNATOR_TOKENS = set(UNIT_DESIGNATORS) | set(UNIT_DESIGNATORS.values())
+_HASH_UNIT_RE = re.compile(r"^#(\w+)$")
 
 
 class AddressError(ValueError):
@@ -36,6 +38,28 @@ def _normalize_street(street):
     return " ".join(_abbreviate_word(w) for w in words)
 
 
+def _split_unit(street_part):
+    """Pull a secondary unit designator (APT 4, STE 200, #12, ...) off the
+    end of a street string, so it can be tracked as its own field instead
+    of being just more text tacked onto the street line.
+
+    Everything from the first recognized designator word to the end of the
+    street text becomes the unit, which covers "BLDG 3 APT 200" without
+    trying to track multiple separate unit fields.
+    """
+    words = [w for w in street_part.split() if w]
+    for i, word in enumerate(words):
+        stripped = word.strip(".,").upper()
+        if stripped in _UNIT_DESIGNATOR_TOKENS:
+            unit = " ".join(w for w in (_abbreviate_word(w) for w in words[i:]) if w)
+            return " ".join(words[:i]), unit or None
+        hash_match = _HASH_UNIT_RE.match(word)
+        if hash_match:
+            remaining = words[:i] + words[i + 1 :]
+            return " ".join(remaining), f"#{hash_match.group(1).upper()}"
+    return street_part, None
+
+
 def _resolve_state(token):
     upper = token.strip(" .,").upper()
     if upper in _STATE_ABBR_SET:
@@ -51,6 +75,10 @@ def parse_address(raw):
     Accepts a state name or two-letter code, with or without a comma
     before it, and a 5 or 9 digit ZIP. Raises AddressError if the text
     doesn't contain a recognizable ZIP, state, city, and street.
+
+    A secondary unit designator at the end of the street (APT 4, STE 200,
+    #12, ...) is split out into its own "unit" field, which is None when
+    no unit is present.
     """
     text = raw.strip()
     if not text:
@@ -75,16 +103,19 @@ def parse_address(raw):
         raise AddressError(f"could not separate street and city in: {raw!r}")
     street_part, _, city_part = head.rpartition(",")
 
-    street = _normalize_street(street_part.strip())
+    street_text, unit = _split_unit(street_part.strip())
+    street = _normalize_street(street_text)
     city = city_part.strip().upper()
     if not street or not city:
         raise AddressError(f"missing street or city in: {raw!r}")
 
-    return {"street": street, "city": city, "state": state, "zip": zip_code}
+    return {"street": street, "unit": unit, "city": city, "state": state, "zip": zip_code}
 
 
 def format_address(parts, multiline=False):
     """Render parsed components back into standardized text."""
     line1 = parts["street"]
+    if parts.get("unit"):
+        line1 = f'{line1} {parts["unit"]}'
     line2 = f'{parts["city"]}, {parts["state"]} {parts["zip"]}'
     return f"{line1}\n{line2}" if multiline else f"{line1}, {line2}"

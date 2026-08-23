@@ -44,7 +44,23 @@ Get structured output instead of a formatted line:
 
 ```
 $ addrnorm --json "123 Main St, Springfield, IL 62704"
-{"street": "123 MAIN ST", "city": "SPRINGFIELD", "state": "IL", "zip": "62704"}
+{"street": "123 MAIN ST", "unit": null, "city": "SPRINGFIELD", "state": "IL", "zip": "62704"}
+```
+
+A secondary unit designator (apartment, suite, building, ...) is tracked as
+its own `unit` field rather than being folded into the street string:
+
+```
+$ addrnorm --json "456 Oak Ave Apt 2, Denver, CO 80202"
+{"street": "456 OAK AVE", "unit": "APT 2", "city": "DENVER", "state": "CO", "zip": "80202"}
+```
+
+A bare `#4` style unit number is kept as-is, since there's no designator
+word to standardize:
+
+```
+$ addrnorm --json "456 Oak Ave #4, Denver, CO 80202"
+{"street": "456 OAK AVE", "unit": "#4", "city": "DENVER", "state": "CO", "zip": "80202"}
 ```
 
 Print street and city/state/zip on separate lines, mailing-label style:
@@ -67,9 +83,12 @@ The parser expects something shaped like `STREET, CITY, STATE ZIP`:
 2. Work backward to find a state - either a two-letter code or a full state
    name, comma-separated or not.
 3. Split what's left on the last remaining comma into street and city.
-4. Normalize each word of the street against lookup tables for directionals
-   (North -> N), street suffixes (Avenue -> AVE), and unit designators
-   (Apartment -> APT).
+4. Pull a secondary unit designator off the end of the street, if there is
+   one - a recognized word like Apartment/Apt/Suite/Ste plus whatever
+   follows it, or a bare `#4` style unit number. This becomes its own
+   `unit` field instead of trailing text on the street.
+5. Normalize each word of the remaining street against lookup tables for
+   directionals (North -> N) and street suffixes (Avenue -> AVE).
 
 Addresses that don't roughly follow that shape - missing commas, missing
 state, no ZIP - will fail to parse. See `addrnorm/data.py` for the current
