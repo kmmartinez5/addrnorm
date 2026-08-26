@@ -75,6 +75,32 @@ Addresses that don't parse (no ZIP found, no recognizable state, street and
 city not separated by a comma) are reported to stderr and skipped; the
 process exits non-zero if any address failed.
 
+## Batch mode
+
+For a CSV file with an `address` column (the column name is matched
+case-insensitively), `--file` normalizes every row and writes the original
+columns back out with the parsed components appended:
+
+```
+$ cat addresses.csv
+id,address
+1,"123 Main St, Springfield, IL 62704"
+2,"456 Oak Avenue Apt 2, Denver, Colorado 80202"
+
+$ addrnorm --file addresses.csv
+id,address,street,unit,city,state,zip,error
+1,"123 Main St, Springfield, IL 62704",123 MAIN ST,,SPRINGFIELD,IL,62704,
+2,"456 Oak Avenue Apt 2, Denver, Colorado 80202",456 OAK AVE,APT 2,DENVER,CO,80202,
+```
+
+A row that fails to parse is still written, with the normalized columns
+left blank and the reason in `error`, so a batch run never silently drops
+input. Use `--out` to write to a file instead of stdout:
+
+```
+$ addrnorm --file addresses.csv --out normalized.csv
+```
+
 ## How parsing works
 
 The parser expects something shaped like `STREET, CITY, STATE ZIP`:
