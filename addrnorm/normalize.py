@@ -69,6 +69,36 @@ def _resolve_state(token):
     return None
 
 
+_MAX_STATE_WORDS = 3  # "DISTRICT OF COLUMBIA" is the longest state name
+
+
+def _split_state(remainder):
+    """Split "...STREET, CITY[,] STATE" into (head, state abbreviation).
+
+    The state may be preceded by a comma or just whitespace, and may be a
+    two-letter code or a full name of one to three words ("NEW YORK",
+    "DISTRICT OF COLUMBIA"). Trying the comma split first, then falling
+    back to a word-count split, means "..., Springfield, IL" and the far
+    more common "..., Springfield IL" (comma before city only) both work.
+    Returns (remainder, None) if no state is found.
+    """
+    stripped = remainder.rstrip()
+    if "," in stripped:
+        head, _, tail = stripped.rpartition(",")
+        state = _resolve_state(tail)
+        if state is not None:
+            return head.strip(), state
+
+    words = stripped.split()
+    for word_count in range(_MAX_STATE_WORDS, 0, -1):
+        if len(words) <= word_count:
+            continue
+        state = _resolve_state(" ".join(words[-word_count:]))
+        if state is not None:
+            return " ".join(words[:-word_count]), state
+    return remainder, None
+
+
 def parse_address(raw):
     """Parse "STREET, CITY, STATE ZIP" style text into components.
 
@@ -90,11 +120,7 @@ def parse_address(raw):
     zip_code = zip_match.group(1) + (zip_match.group(2) or "")
     remainder = text[: zip_match.start()].strip().rstrip(",").strip()
 
-    if "," in remainder:
-        head, _, state_token = remainder.rpartition(",")
-    else:
-        head, _, state_token = remainder.rpartition(" ")
-    state = _resolve_state(state_token)
+    head, state = _split_state(remainder)
     if state is None:
         raise AddressError(f"unrecognized state in: {raw!r}")
 
