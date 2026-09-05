@@ -56,6 +56,40 @@ class MainTextOutputTests(unittest.TestCase):
         self.assertIn("error:", err.getvalue())
 
 
+class DedupModeTests(unittest.TestCase):
+    def test_drops_duplicate_ignoring_zip_plus_four(self):
+        stdin = io.StringIO(
+            "123 Main St, Springfield, IL 62704\n"
+            "123 MAIN STREET, SPRINGFIELD, IL 62704-1234\n"
+            "456 Oak Ave Apt 2, Denver, CO 80202\n"
+        )
+        out = io.StringIO()
+        with patch("sys.stdin", stdin), redirect_stdout(out):
+            code = main(["--dedup"])
+        self.assertEqual(code, 0)
+        lines = out.getvalue().splitlines()
+        self.assertEqual(
+            lines,
+            ["123 MAIN ST, SPRINGFIELD, IL 62704", "456 OAK AVE APT 2, DENVER, CO 80202"],
+        )
+
+    def test_keeps_addresses_that_differ_by_unit(self):
+        stdin = io.StringIO(
+            "456 Oak Ave Apt 2, Denver, CO 80202\n456 Oak Ave Apt 3, Denver, CO 80202\n"
+        )
+        out = io.StringIO()
+        with patch("sys.stdin", stdin), redirect_stdout(out):
+            code = main(["--dedup"])
+        self.assertEqual(code, 0)
+        self.assertEqual(len(out.getvalue().splitlines()), 2)
+
+    def test_dedup_with_file_is_an_error(self):
+        err = io.StringIO()
+        with redirect_stderr(err), self.assertRaises(SystemExit):
+            main(["--dedup", "--file", "addresses.csv"])
+        self.assertIn("--dedup can't be combined with --file", err.getvalue())
+
+
 class CsvBatchModeTests(unittest.TestCase):
     def _write_csv(self, path, header, rows):
         with open(path, "w", newline="", encoding="utf-8") as f:

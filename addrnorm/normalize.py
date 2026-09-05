@@ -145,3 +145,19 @@ def format_address(parts, multiline=False):
         line1 = f'{line1} {parts["unit"]}'
     line2 = f'{parts["city"]}, {parts["state"]} {parts["zip"]}'
     return f"{line1}\n{line2}" if multiline else f"{line1}, {line2}"
+
+
+def address_key(parts):
+    """Return a hashable key for comparing parsed addresses for equality.
+
+    The ZIP+4 extension is dropped since it's a delivery-point detail that
+    doesn't change which address is meant, and a missing unit is treated
+    the same as an empty one, so callers don't need to special-case None.
+    """
+    return (
+        parts["street"],
+        parts["unit"] or "",
+        parts["city"],
+        parts["state"],
+        parts["zip"][:5],
+    )

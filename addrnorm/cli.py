@@ -5,7 +5,7 @@ import csv
 import json
 import sys
 
-from .normalize import AddressError, format_address, parse_address
+from .normalize import AddressError, address_key, format_address, parse_address
 
 _NORMALIZED_FIELDNAMES = ["street", "unit", "city", "state", "zip", "error"]
 
@@ -89,6 +89,13 @@ def build_parser():
         help="print street on one line, city/state/zip on the next",
     )
     parser.add_argument(
+        "--dedup",
+        action="store_true",
+        help="drop addresses that normalize to one already printed, keeping "
+        "the first occurrence of each. A ZIP+4 extension and a missing vs. "
+        "empty unit don't count as a difference. Not usable with --file.",
+    )
+    parser.add_argument(
         "--file",
         metavar="PATH",
         help='batch mode: read addresses from a CSV file with an "address" '
@@ -110,6 +117,9 @@ def main(argv=None):
     if args.out and not args.file:
         parser.error("--out requires --file")
 
+    if args.dedup and args.file:
+        parser.error("--dedup can't be combined with --file")
+
     if args.file:
         if args.address:
             parser.error("--file can't be combined with address arguments")
@@ -125,6 +135,7 @@ def main(argv=None):
         parser.error("no address given as an argument and nothing on stdin")
 
     exit_code = 0
+    seen = set()
     for raw in addresses:
         try:
             parts = parse_address(raw)
@@ -132,6 +143,11 @@ def main(argv=None):
             print(f"error: {exc}", file=sys.stderr)
             exit_code = 1
             continue
+        if args.dedup:
+            key = address_key(parts)
+            if key in seen:
+                continue
+            seen.add(key)
         if args.json:
             print(json.dumps(parts))
         else:

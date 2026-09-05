@@ -1,6 +1,6 @@
 import unittest
 
-from addrnorm.normalize import AddressError, _split_state, format_address, parse_address
+from addrnorm.normalize import AddressError, _split_state, address_key, format_address, parse_address
 
 
 class ParseAddressTests(unittest.TestCase):
@@ -121,6 +121,28 @@ class FormatAddressTests(unittest.TestCase):
     def test_multiline(self):
         parts = {"street": "123 MAIN ST", "unit": None, "city": "SPRINGFIELD", "state": "IL", "zip": "62704"}
         self.assertEqual(format_address(parts, multiline=True), "123 MAIN ST\nSPRINGFIELD, IL 62704")
+
+
+class AddressKeyTests(unittest.TestCase):
+    def test_zip_plus_four_ignored(self):
+        a = parse_address("123 Main St, Springfield, IL 62704")
+        b = parse_address("123 Main St, Springfield, IL 62704-1234")
+        self.assertEqual(address_key(a), address_key(b))
+
+    def test_missing_unit_matches_no_unit(self):
+        a = parse_address("123 Main St, Springfield, IL 62704")
+        b = dict(a, unit="")
+        self.assertEqual(address_key(a), address_key(b))
+
+    def test_different_unit_is_not_equal(self):
+        a = parse_address("456 Oak Ave Apt 2, Denver, CO 80202")
+        b = parse_address("456 Oak Ave Apt 3, Denver, CO 80202")
+        self.assertNotEqual(address_key(a), address_key(b))
+
+    def test_different_street_is_not_equal(self):
+        a = parse_address("123 Main St, Springfield, IL 62704")
+        b = parse_address("124 Main St, Springfield, IL 62704")
+        self.assertNotEqual(address_key(a), address_key(b))
 
 
 if __name__ == "__main__":

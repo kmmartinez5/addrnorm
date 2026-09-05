@@ -75,6 +75,25 @@ Addresses that don't parse (no ZIP found, no recognizable state, street and
 city not separated by a comma) are reported to stderr and skipped; the
 process exits non-zero if any address failed.
 
+Drop duplicates from a list, keeping the first occurrence of each address.
+Two entries count as the same address if they normalize to the same street,
+unit, city, state, and 5-digit ZIP - a ZIP+4 extension and a missing vs.
+blank unit don't count as a difference:
+
+```
+$ cat addresses.txt
+123 Main St, Springfield, IL 62704
+123 MAIN STREET, SPRINGFIELD, IL 62704-1234
+456 Oak Ave Apt 2, Denver, CO 80202
+
+$ addrnorm --dedup < addresses.txt
+123 MAIN ST, SPRINGFIELD, IL 62704
+456 OAK AVE APT 2, DENVER, CO 80202
+```
+
+`--dedup` isn't available with `--file`; batch mode always writes back one
+output row per input row.
+
 ## Batch mode
 
 For a CSV file with an `address` column (the column name is matched
