@@ -130,7 +130,9 @@ The parser expects something shaped like `STREET, CITY, STATE ZIP`:
 3. Split what's left on the last remaining comma into street and city.
 4. Pull a secondary unit designator off the end of the street, if there is
    one - a recognized word like Apartment/Apt/Suite/Ste plus whatever
-   follows it, or a bare `#4` style unit number. This becomes its own
+   follows it, a two-word phrase like "Mobile Home" or "Trailer Space"
+   that has no official USPS abbreviation but is still recognized as a
+   designator, or a bare `#4` style unit number. This becomes its own
    `unit` field instead of trailing text on the street.
 5. Normalize each word of the remaining street against lookup tables for
    directionals (North -> N) and street suffixes (Avenue -> AVE).

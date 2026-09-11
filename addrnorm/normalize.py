@@ -8,7 +8,13 @@ delivery-point database, just normalizes formatting.
 
 import re
 
-from .data import DIRECTIONALS, STATE_ABBR, STREET_SUFFIXES, UNIT_DESIGNATORS
+from .data import (
+    DIRECTIONALS,
+    MULTI_WORD_UNIT_DESIGNATORS,
+    STATE_ABBR,
+    STREET_SUFFIXES,
+    UNIT_DESIGNATORS,
+)
 
 _ZIP_RE = re.compile(r"(\d{5})(-\d{4})?\s*$")
 _STATE_ABBR_SET = set(STATE_ABBR.values())
@@ -45,11 +51,18 @@ def _split_unit(street_part):
 
     Everything from the first recognized designator word to the end of the
     street text becomes the unit, which covers "BLDG 3 APT 200" without
-    trying to track multiple separate unit fields.
+    trying to track multiple separate unit fields. A two-word designator
+    like "MOBILE HOME" is checked before the single-word tokens so its
+    first word isn't mistaken for part of the street name.
     """
     words = [w for w in street_part.split() if w]
     for i, word in enumerate(words):
         stripped = word.strip(".,").upper()
+        if i + 1 < len(words):
+            next_stripped = words[i + 1].strip(".,").upper()
+            if (stripped, next_stripped) in MULTI_WORD_UNIT_DESIGNATORS:
+                unit = " ".join(w for w in (_abbreviate_word(w) for w in words[i:]) if w)
+                return " ".join(words[:i]), unit or None
         if stripped in _UNIT_DESIGNATOR_TOKENS:
             unit = " ".join(w for w in (_abbreviate_word(w) for w in words[i:]) if w)
             return " ".join(words[:i]), unit or None

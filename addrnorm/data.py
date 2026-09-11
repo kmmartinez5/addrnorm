@@ -195,3 +195,15 @@ UNIT_DESIGNATORS = {
     "APARTMENT": "APT", "BUILDING": "BLDG", "DEPARTMENT": "DEPT",
     "FLOOR": "FL", "ROOM": "RM", "SUITE": "STE", "UNIT": "UNIT",
 }
+
+# Two-word secondary designators that show up in freeform addresses but
+# aren't part of the official single-word Pub 28 Appendix C2 list, so
+# there's no standard abbreviation to shrink them to - just recognized as
+# the start of a unit designator so they aren't left dangling on the
+# street line.
+MULTI_WORD_UNIT_DESIGNATORS = {
+    ("MOBILE", "HOME"),
+    ("TRAILER", "SPACE"),
+    ("PARKING", "SPACE"),
+    ("MAIL", "BOX"),
+}

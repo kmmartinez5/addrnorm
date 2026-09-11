@@ -62,6 +62,16 @@ class ParseAddressTests(unittest.TestCase):
         self.assertEqual(parts["street"], "300 ELM ST")
         self.assertEqual(parts["unit"], "BLDG 3 APT 200")
 
+    def test_multi_word_unit_designator(self):
+        parts = parse_address("40 Elm St Mobile Home 12, Reno, NV 89501")
+        self.assertEqual(parts["street"], "40 ELM ST")
+        self.assertEqual(parts["unit"], "MOBILE HOME 12")
+
+    def test_multi_word_unit_designator_before_single_word_combo(self):
+        parts = parse_address("40 Elm St Trailer Space 12 Apt 2, Reno, NV 89501")
+        self.assertEqual(parts["street"], "40 ELM ST")
+        self.assertEqual(parts["unit"], "TRAILER SPACE 12 APT 2")
+
     def test_no_unit_present(self):
         parts = parse_address("123 Main St, Springfield, IL 62704")
         self.assertIsNone(parts["unit"])
