@@ -63,6 +63,15 @@ $ addrnorm --json "456 Oak Ave #4, Denver, CO 80202"
 {"street": "456 OAK AVE", "unit": "#4", "city": "DENVER", "state": "CO", "zip": "80202"}
 ```
 
+A PO Box has no street suffix to key off of, so it's recognized as its own
+case: any of "PO Box", "P.O. Box", "P O Box", or "Post Office Box" collapses
+to the one USPS form regardless of how it was punctuated or spaced.
+
+```
+$ addrnorm --json "P.O. Box 123, Springfield, IL 62704"
+{"street": "PO BOX 123", "unit": null, "city": "SPRINGFIELD", "state": "IL", "zip": "62704"}
+```
+
 Print street and city/state/zip on separate lines, mailing-label style:
 
 ```
@@ -135,7 +144,9 @@ The parser expects something shaped like `STREET, CITY, STATE ZIP`:
    designator, or a bare `#4` style unit number. This becomes its own
    `unit` field instead of trailing text on the street.
 5. Normalize each word of the remaining street against lookup tables for
-   directionals (North -> N) and street suffixes (Avenue -> AVE).
+   directionals (North -> N) and street suffixes (Avenue -> AVE) - unless
+   it's a PO Box, which has no suffix to normalize against and is instead
+   collapsed straight to "PO BOX <number>".
 
 Addresses that don't roughly follow that shape - missing commas, missing
 state, no ZIP - will fail to parse. See `addrnorm/data.py` for the current

@@ -21,6 +21,18 @@ _STATE_ABBR_SET = set(STATE_ABBR.values())
 _UNIT_DESIGNATOR_TOKENS = set(UNIT_DESIGNATORS) | set(UNIT_DESIGNATORS.values())
 _HASH_UNIT_RE = re.compile(r"^#(\w+)$")
 
+# A PO Box has no street suffix for the word-by-word abbreviation pass to
+# key off of, and "P.O." in particular has an internal period that
+# _abbreviate_word's leading/trailing strip() never touches, so it would
+# otherwise pass through unchanged instead of collapsing to the one USPS
+# form. Matched and rewritten as a whole before that pass runs. Requires
+# the "P.O."/"POST OFFICE" prefix so a real street name that happens to
+# start with "Box" (e.g. "Box Elder Court") isn't mistaken for one.
+_PO_BOX_RE = re.compile(
+    r"^(?:POST\s+OFFICE\s+BOX|P\.?\s*O\.?\s*BOX)\s+(\S.*)$",
+    re.IGNORECASE,
+)
+
 
 class AddressError(ValueError):
     """Raised when input text can't be parsed as a US postal address."""
@@ -40,6 +52,10 @@ def _abbreviate_word(word):
 
 
 def _normalize_street(street):
+    po_box_match = _PO_BOX_RE.match(street.strip())
+    if po_box_match:
+        box_id = po_box_match.group(1).strip().rstrip(".,").upper()
+        return f"PO BOX {box_id}"
     words = [w for w in street.split() if w]
     return " ".join(_abbreviate_word(w) for w in words)
 

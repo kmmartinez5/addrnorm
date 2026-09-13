@@ -101,6 +101,37 @@ class ParseAddressTests(unittest.TestCase):
             parse_address("123 Main St IL 62704")
         self.assertIn("could not separate street and city", str(ctx.exception))
 
+    def test_po_box_plain(self):
+        parts = parse_address("PO Box 123, Springfield, IL 62704")
+        self.assertEqual(parts["street"], "PO BOX 123")
+        self.assertIsNone(parts["unit"])
+
+    def test_po_box_with_periods(self):
+        parts = parse_address("P.O. Box 123, Springfield, IL 62704")
+        self.assertEqual(parts["street"], "PO BOX 123")
+
+    def test_po_box_space_separated(self):
+        parts = parse_address("P O Box 123, Springfield, IL 62704")
+        self.assertEqual(parts["street"], "PO BOX 123")
+
+    def test_po_box_lowercase(self):
+        parts = parse_address("po box 123, springfield, il 62704")
+        self.assertEqual(parts["street"], "PO BOX 123")
+
+    def test_post_office_box_spelled_out(self):
+        parts = parse_address("Post Office Box 123, Springfield, IL 62704")
+        self.assertEqual(parts["street"], "PO BOX 123")
+
+    def test_po_box_alphanumeric_id(self):
+        parts = parse_address("PO Box 12A, Springfield, IL 62704")
+        self.assertEqual(parts["street"], "PO BOX 12A")
+
+    def test_street_named_box_is_not_mistaken_for_po_box(self):
+        # No "PO"/"P.O."/"Post Office" prefix, so this is a real street
+        # name rather than a box number.
+        parts = parse_address("Box Elder Ct, Reno, NV 89501")
+        self.assertEqual(parts["street"], "BOX ELDER CT")
+
 
 class SplitStateTests(unittest.TestCase):
     def test_comma_before_state(self):
