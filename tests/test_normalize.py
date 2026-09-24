@@ -132,6 +132,37 @@ class ParseAddressTests(unittest.TestCase):
         parts = parse_address("Box Elder Ct, Reno, NV 89501")
         self.assertEqual(parts["street"], "BOX ELDER CT")
 
+    def test_apo_address(self):
+        parts = parse_address("Unit 2050 Box 4190, APO, AP 96278")
+        self.assertEqual(
+            parts,
+            {"street": "UNIT 2050 BOX 4190", "unit": None, "city": "APO", "state": "AP", "zip": "96278"},
+        )
+
+    def test_fpo_address_no_comma_before_state(self):
+        parts = parse_address("PSC 1234 Box 2345, FPO AE 09501")
+        self.assertEqual(parts["street"], "PSC 1234 BOX 2345")
+        self.assertEqual(parts["city"], "FPO")
+        self.assertEqual(parts["state"], "AE")
+
+    def test_dpo_address_lowercase(self):
+        parts = parse_address("cmr 425, dpo, aa 34098")
+        self.assertEqual(parts["street"], "CMR 425")
+        self.assertEqual(parts["city"], "DPO")
+        self.assertEqual(parts["state"], "AA")
+
+    def test_military_state_without_military_city_raises(self):
+        with self.assertRaises(AddressError):
+            parse_address("Unit 2050 Box 4190, Springfield, AP 96278")
+
+    def test_military_city_without_military_state_raises(self):
+        with self.assertRaises(AddressError):
+            parse_address("Unit 2050 Box 4190, APO, NY 96278")
+
+    def test_military_street_without_designator_raises(self):
+        with self.assertRaises(AddressError):
+            parse_address("123 Main St, APO, AP 96278")
+
 
 class SplitStateTests(unittest.TestCase):
     def test_comma_before_state(self):

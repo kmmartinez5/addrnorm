@@ -72,6 +72,17 @@ $ addrnorm --json "P.O. Box 123, Springfield, IL 62704"
 {"street": "PO BOX 123", "unit": null, "city": "SPRINGFIELD", "state": "IL", "zip": "62704"}
 ```
 
+An APO/FPO/DPO military address is recognized by its city (APO, FPO, or DPO)
+and state (AA, AE, or AP - these are mail-routing codes for the Americas,
+Europe/Middle East/Africa, and Pacific, not real states). The street line is
+a Unit/PSC/CMR designator plus a number, left as-is rather than split into a
+separate unit field, since that format has no secondary unit to pull out:
+
+```
+$ addrnorm --json "Unit 2050 Box 4190, APO, AP 96278"
+{"street": "UNIT 2050 BOX 4190", "unit": null, "city": "APO", "state": "AP", "zip": "96278"}
+```
+
 Print street and city/state/zip on separate lines, mailing-label style:
 
 ```
@@ -146,7 +157,9 @@ The parser expects something shaped like `STREET, CITY, STATE ZIP`:
 5. Normalize each word of the remaining street against lookup tables for
    directionals (North -> N) and street suffixes (Avenue -> AVE) - unless
    it's a PO Box, which has no suffix to normalize against and is instead
-   collapsed straight to "PO BOX <number>".
+   collapsed straight to "PO BOX <number>", or a military address (city
+   APO/FPO/DPO with state AA/AE/AP), whose street line is just uppercased
+   as Unit/PSC/CMR plus a number.
 
 Addresses that don't roughly follow that shape - missing commas, missing
 state, no ZIP - will fail to parse. See `addrnorm/data.py` for the current

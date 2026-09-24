@@ -207,3 +207,16 @@ MULTI_WORD_UNIT_DESIGNATORS = {
     ("PARKING", "SPACE"),
     ("MAIL", "BOX"),
 }
+
+# APO/FPO/DPO military mail uses these in place of a real city name, and
+# AA/AE/AP in place of a real state - they're geographic mail-routing
+# codes for Americas / Europe-Middle East-Africa / Pacific, not places.
+# The two fields always pair up together and never mix with a real
+# city/state.
+MILITARY_CITIES = {"APO", "FPO", "DPO"}
+MILITARY_STATES = {"AA", "AE", "AP"}
+
+# The primary address line on military mail is built from one of these
+# unit designators (Unit/PSC/CMR) plus a number, optionally followed by a
+# box number - there's no street name or suffix to normalize against.
+MILITARY_LINE_DESIGNATORS = {"UNIT", "PSC", "CMR"}

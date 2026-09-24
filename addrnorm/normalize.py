@@ -10,6 +10,9 @@ import re
 
 from .data import (
     DIRECTIONALS,
+    MILITARY_CITIES,
+    MILITARY_LINE_DESIGNATORS,
+    MILITARY_STATES,
     MULTI_WORD_UNIT_DESIGNATORS,
     STATE_ABBR,
     STREET_SUFFIXES,
@@ -60,6 +63,24 @@ def _normalize_street(street):
     return " ".join(_abbreviate_word(w) for w in words)
 
 
+def _normalize_military_line(street):
+    """Normalize a military mail address line ("UNIT 2050 BOX 4190").
+
+    Unlike a civilian street, this has no suffix or directional words to
+    abbreviate and no separate secondary-unit field - "UNIT"/"PSC"/"CMR"
+    plus a number *is* the whole delivery address, so it's just
+    uppercased word by word rather than run through _split_unit (which
+    would otherwise mistake the leading "UNIT" for a secondary unit
+    designator and strip the entire line off the street).
+    """
+    words = [w.strip(".,").upper() for w in street.split() if w.strip(".,")]
+    if not words or words[0] not in MILITARY_LINE_DESIGNATORS:
+        raise AddressError(
+            f'military address must start with one of {sorted(MILITARY_LINE_DESIGNATORS)}: {street!r}'
+        )
+    return " ".join(words)
+
+
 def _split_unit(street_part):
     """Pull a secondary unit designator (APT 4, STE 200, #12, ...) off the
     end of a street string, so it can be tracked as its own field instead
@@ -91,7 +112,7 @@ def _split_unit(street_part):
 
 def _resolve_state(token):
     upper = token.strip(" .,").upper()
-    if upper in _STATE_ABBR_SET:
+    if upper in _STATE_ABBR_SET or upper in MILITARY_STATES:
         return upper
     if upper in STATE_ABBR:
         return STATE_ABBR[upper]
@@ -138,6 +159,11 @@ def parse_address(raw):
     A secondary unit designator at the end of the street (APT 4, STE 200,
     #12, ...) is split out into its own "unit" field, which is None when
     no unit is present.
+
+    An APO/FPO/DPO military address is recognized by its city/state pair
+    (city one of APO/FPO/DPO, state one of AA/AE/AP) and its street line
+    is left as Unit/PSC/CMR plus a number rather than split for a
+    secondary unit, since there's no separate unit field in that format.
     """
     text = raw.strip()
     if not text:
@@ -157,10 +183,21 @@ def parse_address(raw):
     if "," not in head:
         raise AddressError(f"could not separate street and city in: {raw!r}")
     street_part, _, city_part = head.rpartition(",")
-
-    street_text, unit = _split_unit(street_part.strip())
-    street = _normalize_street(street_text)
     city = city_part.strip().upper()
+
+    is_military = state in MILITARY_STATES or city in MILITARY_CITIES
+    if is_military:
+        if state not in MILITARY_STATES or city not in MILITARY_CITIES:
+            raise AddressError(
+                f"military city/state must be one of {sorted(MILITARY_CITIES)} "
+                f"with one of {sorted(MILITARY_STATES)}, not {city!r}/{state!r}: {raw!r}"
+            )
+        street = _normalize_military_line(street_part.strip())
+        unit = None
+    else:
+        street_text, unit = _split_unit(street_part.strip())
+        street = _normalize_street(street_text)
+
     if not street or not city:
         raise AddressError(f"missing street or city in: {raw!r}")
 
