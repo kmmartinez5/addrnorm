@@ -132,6 +132,31 @@ class ParseAddressTests(unittest.TestCase):
         parts = parse_address("Box Elder Ct, Reno, NV 89501")
         self.assertEqual(parts["street"], "BOX ELDER CT")
 
+    def test_rural_route_plain(self):
+        parts = parse_address("RR 2 Box 45, Springfield, IL 62704")
+        self.assertEqual(parts["street"], "RR 2 BOX 45")
+        self.assertIsNone(parts["unit"])
+
+    def test_rural_route_spelled_out(self):
+        parts = parse_address("Rural Route 2 Box 45, Springfield, IL 62704")
+        self.assertEqual(parts["street"], "RR 2 BOX 45")
+
+    def test_rural_route_with_periods(self):
+        parts = parse_address("R.R. 2 Box 45, Springfield, IL 62704")
+        self.assertEqual(parts["street"], "RR 2 BOX 45")
+
+    def test_highway_contract_route(self):
+        parts = parse_address("HC 65 Box 200, Springfield, IL 62704")
+        self.assertEqual(parts["street"], "HC 65 BOX 200")
+
+    def test_rural_route_lowercase(self):
+        parts = parse_address("rr 2 box 45, springfield, il 62704")
+        self.assertEqual(parts["street"], "RR 2 BOX 45")
+
+    def test_rural_route_alphanumeric_box_id(self):
+        parts = parse_address("RR 2 Box 45A, Springfield, IL 62704")
+        self.assertEqual(parts["street"], "RR 2 BOX 45A")
+
     def test_apo_address(self):
         parts = parse_address("Unit 2050 Box 4190, APO, AP 96278")
         self.assertEqual(

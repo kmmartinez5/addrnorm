@@ -72,6 +72,16 @@ $ addrnorm --json "P.O. Box 123, Springfield, IL 62704"
 {"street": "PO BOX 123", "unit": null, "city": "SPRINGFIELD", "state": "IL", "zip": "62704"}
 ```
 
+A rural route address has no street suffix either, so it's recognized as its
+own case too: "RR", "R.R.", or "Rural Route" plus a route number, and "HC"
+plus a route number for a Highway Contract route, each followed by a box
+number, collapses to one form regardless of spelling or punctuation.
+
+```
+$ addrnorm --json "Rural Route 2 Box 45, Springfield, IL 62704"
+{"street": "RR 2 BOX 45", "unit": null, "city": "SPRINGFIELD", "state": "IL", "zip": "62704"}
+```
+
 An APO/FPO/DPO military address is recognized by its city (APO, FPO, or DPO)
 and state (AA, AE, or AP - these are mail-routing codes for the Americas,
 Europe/Middle East/Africa, and Pacific, not real states). The street line is
@@ -156,10 +166,11 @@ The parser expects something shaped like `STREET, CITY, STATE ZIP`:
    `unit` field instead of trailing text on the street.
 5. Normalize each word of the remaining street against lookup tables for
    directionals (North -> N) and street suffixes (Avenue -> AVE) - unless
-   it's a PO Box, which has no suffix to normalize against and is instead
-   collapsed straight to "PO BOX <number>", or a military address (city
-   APO/FPO/DPO with state AA/AE/AP), whose street line is just uppercased
-   as Unit/PSC/CMR plus a number.
+   it's a PO Box or a rural route (RR/HC), neither of which have a
+   suffix to normalize against and are instead collapsed straight to
+   "PO BOX <number>" or "RR/HC <route> BOX <number>", or a military
+   address (city APO/FPO/DPO with state AA/AE/AP), whose street line is
+   just uppercased as Unit/PSC/CMR plus a number.
 
 Addresses that don't roughly follow that shape - missing commas, missing
 state, no ZIP - will fail to parse. See `addrnorm/data.py` for the current

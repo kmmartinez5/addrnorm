@@ -36,6 +36,17 @@ _PO_BOX_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Rural route addresses, like a PO Box, have no street suffix to key off
+# of and are instead their own fixed shape: a route designator (RR, or
+# HC for a Highway Contract route) plus a route number, then a box
+# number. "R.R." and "Rural Route" are accepted spellings of the same
+# designator; the captured kind decides which of the two abbreviations
+# comes out.
+_RURAL_ROUTE_RE = re.compile(
+    r"^(?P<kind>RURAL\s+ROUTE|R\.?\s*R\.?|HC)\s+(?P<route>\d+)\s+BOX\s+(?P<box>\S+)$",
+    re.IGNORECASE,
+)
+
 
 class AddressError(ValueError):
     """Raised when input text can't be parsed as a US postal address."""
@@ -55,10 +66,17 @@ def _abbreviate_word(word):
 
 
 def _normalize_street(street):
-    po_box_match = _PO_BOX_RE.match(street.strip())
+    stripped = street.strip()
+    po_box_match = _PO_BOX_RE.match(stripped)
     if po_box_match:
         box_id = po_box_match.group(1).strip().rstrip(".,").upper()
         return f"PO BOX {box_id}"
+    rural_route_match = _RURAL_ROUTE_RE.match(stripped)
+    if rural_route_match:
+        kind = "HC" if rural_route_match.group("kind").upper().startswith("HC") else "RR"
+        route = rural_route_match.group("route")
+        box_id = rural_route_match.group("box").rstrip(".,").upper()
+        return f"{kind} {route} BOX {box_id}"
     words = [w for w in street.split() if w]
     return " ".join(_abbreviate_word(w) for w in words)
 
@@ -164,6 +182,11 @@ def parse_address(raw):
     (city one of APO/FPO/DPO, state one of AA/AE/AP) and its street line
     is left as Unit/PSC/CMR plus a number rather than split for a
     secondary unit, since there's no separate unit field in that format.
+
+    A rural route address ("RR 2 Box 45", "HC 65 Box 200", spelled out as
+    "Rural Route" or punctuated as "R.R.") is recognized by that shape and
+    collapsed to "RR <route> BOX <box>" or "HC <route> BOX <box>", since
+    like a PO Box it has no street suffix to normalize against.
     """
     text = raw.strip()
     if not text:
